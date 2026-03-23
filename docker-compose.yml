@@ -1,0 +1,33 @@
+services:
+  slack-gemini-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - WORKSPACE_PATH=${WORKSPACE_PATH:-/app/workspace}
+        - USER_NAME=${USER_NAME:-ubuntu}
+        - USER_ID=${USER_ID:-1000}
+        - GROUP_ID=${GROUP_ID:-1000}
+    container_name: gemini-slack-streamer
+    restart: always # 서버 재부팅이나 프로세스 종료 시 자동 재시작
+    tty: true       # PTY 할당 허용
+    stdin_open: true # 표준 입력 유지
+    
+    # 컨테이너 내부 프로세스를 호스트 계정 권한으로 실행합니다.
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
+    
+    # [환경변수 로드] .env 파일에 정의된 모든 변수를 컨테이너로 한 번에 주입합니다.
+    environment:
+      - HOME=/home/ubuntu
+      - WORKSPACE_PATH=${WORKSPACE_PATH:-/app/workspace}
+    env_file:
+      - .env 
+      
+    volumes:
+      # [볼륨 1: 작업 폴더] 호스트의 GEMINI.md 파일 수정 및 CLI 코드 실행 공간
+      # 왼쪽: 실제 로컬 서버의 경로 / 오른쪽: 컨테이너 내부의 격리된 경로
+      - ./workspace:${WORKSPACE_PATH:-/app/workspace}
+      
+      # [볼륨 2: 인증 및 설정 공유] 구글 로그인 세션 및 SuperGemini 설정 동기화
+      # 로컬 PC에서 `gemini login`을 수행하면 컨테이너 내부도 즉시 로그인 상태가 됨
+      - ~/.gemini:/home/ubuntu/.gemini
